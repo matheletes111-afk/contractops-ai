@@ -111,43 +111,78 @@ async function analyzeChunk(
  * Prioritizes high-risk findings and combines clauses
  */
 function mergeResults(results: AnalysisResult[]): AnalysisResult {
-  if (results.length === 0) {
+  try {
+    if (results.length === 0) {
+      return {
+        overall_risk: "Low",
+        clauses: [],
+        error: "No analysis results to merge",
+      };
+    }
+
+    if (results.length === 1) {
+      return results[0];
+    }
+
+    // Limit the number of results to merge to prevent array issues
+    const maxResults = 100;
+    const resultsToMerge = results.slice(0, maxResults);
+
+    // Collect all clauses, avoiding duplicates by name
+    const clauseMap = new Map<string, Clause>();
+    const maxClauses = 200; // Limit total clauses to prevent array length issues
+
+    for (const result of resultsToMerge) {
+      if (result.clauses && Array.isArray(result.clauses)) {
+        for (const clause of result.clauses) {
+          if (clauseMap.size >= maxClauses) break;
+          
+          const existing = clauseMap.get(clause.name);
+          // Prefer higher risk levels if duplicate
+          if (!existing || getRiskPriority(clause.risk_level) > getRiskPriority(existing.risk_level)) {
+            clauseMap.set(clause.name, clause);
+          }
+        }
+      }
+    }
+
+    // Safely convert map to array
+    let clauses: Clause[];
+    try {
+      clauses = Array.from(clauseMap.values());
+    } catch (arrayError: any) {
+      console.error("Error converting clause map to array:", arrayError);
+      // If Array.from fails, try manual iteration with limit
+      clauses = [];
+      let count = 0;
+      for (const clause of clauseMap.values()) {
+        if (count >= maxClauses) break;
+        clauses.push(clause);
+        count++;
+      }
+    }
+
+    // Determine overall risk (highest risk level found)
+    const riskLevels = resultsToMerge.map((r) => r.overall_risk || "Low");
+    const overallRisk = riskLevels.reduce((highest, current) => {
+      return getRiskPriority(current) > getRiskPriority(highest) ? current : highest;
+    }, "Low" as const);
+
+    return {
+      overall_risk: overallRisk,
+      clauses,
+    };
+  } catch (error: any) {
+    console.error("Error merging results:", error);
+    // Return minimal result if merging fails
     return {
       overall_risk: "Low",
       clauses: [],
-      error: "No analysis results to merge",
+      error: error?.message?.includes("Invalid array length") || error?.name === "RangeError"
+        ? "The contract is too large to process. Please try with a shorter contract."
+        : "Failed to merge analysis results. Please try again.",
     };
   }
-
-  if (results.length === 1) {
-    return results[0];
-  }
-
-  // Collect all clauses, avoiding duplicates by name
-  const clauseMap = new Map<string, Clause>();
-
-  for (const result of results) {
-    for (const clause of result.clauses) {
-      const existing = clauseMap.get(clause.name);
-      // Prefer higher risk levels if duplicate
-      if (!existing || getRiskPriority(clause.risk_level) > getRiskPriority(existing.risk_level)) {
-        clauseMap.set(clause.name, clause);
-      }
-    }
-  }
-
-  const clauses = Array.from(clauseMap.values());
-
-  // Determine overall risk (highest risk level found)
-  const riskLevels = results.map((r) => r.overall_risk);
-  const overallRisk = riskLevels.reduce((highest, current) => {
-    return getRiskPriority(current) > getRiskPriority(highest) ? current : highest;
-  }, "Low" as const);
-
-  return {
-    overall_risk: overallRisk,
-    clauses,
-  };
 }
 
 /**
@@ -171,21 +206,60 @@ function getRiskPriority(risk: string): number {
  * This prevents "Invalid array length" errors when serializing large responses
  */
 function truncateClauseTexts(result: AnalysisResult, maxLength: number = 10000): AnalysisResult {
-  return {
-    ...result,
-    clauses: result.clauses.map((clause) => ({
-      ...clause,
-      original_text: clause.original_text.length > maxLength
-        ? clause.original_text.substring(0, maxLength) + "... [truncated]"
-        : clause.original_text,
-      suggested_redline: clause.suggested_redline.length > maxLength
-        ? clause.suggested_redline.substring(0, maxLength) + "... [truncated]"
-        : clause.suggested_redline,
-      summary: clause.summary.length > maxLength
-        ? clause.summary.substring(0, maxLength) + "... [truncated]"
-        : clause.summary,
-    })),
-  };
+  try {
+    // Limit the number of clauses to prevent array length issues
+    const maxClauses = 100;
+    const clausesToProcess = result.clauses && Array.isArray(result.clauses) 
+      ? result.clauses.slice(0, maxClauses)
+      : [];
+    
+    // Safely truncate clause texts
+    const truncatedClauses = clausesToProcess.map((clause) => {
+      try {
+        return {
+          ...clause,
+          original_text: clause.original_text && clause.original_text.length > maxLength
+            ? clause.original_text.substring(0, maxLength) + "... [truncated]"
+            : (clause.original_text || ""),
+          suggested_redline: clause.suggested_redline && clause.suggested_redline.length > maxLength
+            ? clause.suggested_redline.substring(0, maxLength) + "... [truncated]"
+            : (clause.suggested_redline || ""),
+          summary: clause.summary && clause.summary.length > maxLength
+            ? clause.summary.substring(0, maxLength) + "... [truncated]"
+            : (clause.summary || ""),
+        };
+      } catch (clauseError: any) {
+        // If individual clause processing fails, return minimal clause
+        console.warn("Error processing clause:", clauseError);
+        return {
+          ...clause,
+          original_text: (clause.original_text || "").substring(0, 5000),
+          suggested_redline: (clause.suggested_redline || "").substring(0, 5000),
+          summary: (clause.summary || "").substring(0, 1000),
+        };
+      }
+    });
+    
+    return {
+      ...result,
+      clauses: truncatedClauses,
+    };
+  } catch (error: any) {
+    // If truncation fails completely, return minimal result
+    console.error("Error in truncateClauseTexts:", error);
+    
+    // Don't propagate raw error messages, especially "Invalid array length"
+    const errorMessage = (error?.message?.includes("Invalid array length") || 
+                          error?.name === "RangeError")
+      ? "Analysis result is too large to process. Please try with a shorter contract."
+      : "Analysis result is too large to process. Please try with a shorter contract.";
+    
+    return {
+      overall_risk: result.overall_risk || "Low",
+      clauses: [],
+      error: errorMessage,
+    };
+  }
 }
 
 /**
@@ -231,13 +305,23 @@ export async function analyzeContract(
     }
   } catch (error) {
     console.error("Error in contract analysis:", error);
+    
+    // Transform "Invalid array length" errors into user-friendly messages
+    let errorMessage = "Failed to analyze contract. Please try again.";
+    if (error instanceof Error) {
+      if (error.message?.includes("Invalid array length") || 
+          error.message?.includes("RangeError") ||
+          error.name === "RangeError") {
+        errorMessage = "The contract is too large to process. Please try with a shorter contract or split it into sections.";
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
     const errorResult: ErrorResult = {
       overall_risk: "Low",
       clauses: [],
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to analyze contract. Please try again.",
+      error: errorMessage,
     };
     return errorResult;
   }
