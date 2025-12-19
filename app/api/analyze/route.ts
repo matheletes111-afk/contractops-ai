@@ -1,15 +1,54 @@
 // API route for contract analysis
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth-config";
 import { extractTextFromPDF } from "@/lib/pdf-parser";
 import { extractTextFromDOCX } from "@/lib/docx-parser";
 import { analyzeContract } from "@/lib/openai-client";
 import { AnalysisResult } from "@/types/contract";
+import { shouldBlockFreeUser } from "@/lib/usage-limits";
+import { createContract, saveAnalysis, incrementAnalysisCount, getUserById } from "@/lib/db-operations";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for long contracts
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Authentication required. Please sign in to analyze contracts." },
+        { status: 401 }
+      );
+    }
+
+    const user = session.user as any;
+    const userId = user.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID not found. Please sign in again." },
+        { status: 401 }
+      );
+    }
+
+    // Get current user data from database
+    const dbUser = await getUserById(userId);
+    if (!dbUser) {
+      return NextResponse.json(
+        { error: "User not found. Please sign in again." },
+        { status: 401 }
+      );
+    }
+
+    // Check usage limits
+    if (shouldBlockFreeUser(dbUser.plan, dbUser.analysis_count)) {
+      return NextResponse.json(
+        { error: "Usage limit exceeded. Please upgrade your plan to continue.", redirect: "/pricing" },
+        { status: 403 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
 
@@ -94,6 +133,16 @@ export async function POST(request: NextRequest) {
         },
         { status: 500 }
       );
+    }
+
+    // Save to database (before serialization)
+    const contractId = await createContract(userId, file.name);
+    if (contractId) {
+      await saveAnalysis(contractId, userId, analysisResult);
+      await incrementAnalysisCount(userId);
+    } else {
+      console.error("Failed to save contract to database");
+      // Still return the result even if DB save fails
     }
 
     // Validate and serialize response with error handling for oversized data

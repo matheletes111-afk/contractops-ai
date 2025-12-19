@@ -1,0 +1,117 @@
+// Prisma schema for ContractOps AI
+// Migrated from InstantDB
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  name          String?
+  image         String?
+  plan          String    @default("free") // "free" | "basic" | "standard" | "premium" | "enterprise"
+  analysisCount Int       @default(0) @map("analysis_count")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  accounts            Account[]
+  sessions            Session[]
+  contracts           Contract[]
+  analysisResults     AnalysisResult[]
+  subscriptionRequests SubscriptionRequest[]
+
+  @@map("users")
+}
+
+// NextAuth Account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refreshToken      String? @map("refresh_token") @db.Text
+  accessToken       String? @map("access_token") @db.Text
+  expiresAt         Int?    @map("expires_at")
+  tokenType         String? @map("token_type")
+  scope             String?
+  idToken           String? @map("id_token") @db.Text
+  sessionState      String? @map("session_state")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// NextAuth Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// NextAuth VerificationToken model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Contract model
+model Contract {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  fileName  String   @map("file_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysisResults AnalysisResult[]
+
+  @@map("contracts")
+}
+
+// AnalysisResult model
+model AnalysisResult {
+  id         String   @id @default(cuid())
+  contractId String   @map("contract_id")
+  userId     String   @map("user_id")
+  riskSummary String  @map("risk_summary") @db.Text // JSON stringified
+  clauses    String   @db.Text // JSON stringified
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("analysis_results")
+}
+
+// SubscriptionRequest model
+model SubscriptionRequest {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  selectedPlan    String   @map("selected_plan") // "basic" | "standard" | "premium"
+  paymentReference String? @map("payment_reference")
+  status          String   @default("pending") // "pending" | "approved"
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscription_requests")
+}
