@@ -23,9 +23,21 @@ export default function DashboardPage() {
     }
   }, [searchParams]);
 
+  // Show loading state while session is being fetched
+  if (status === "loading" || !session) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF9933] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   const user = session.user as any;
-  const plan = user.plan || "free";
-  const analysisCount = user.analysis_count || 0;
+  const plan = user?.plan || "free";
+  const analysisCount = user?.analysis_count || 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -35,7 +47,7 @@ export default function DashboardPage() {
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
             <p className="text-gray-600">
-              Welcome back, {user.name || user.email}
+              Welcome back, {user?.name || user?.email || "User"}
             </p>
           </div>
 
