@@ -1,5 +1,4 @@
 // NextAuth configuration
-import { NextAuthOptions } from "next-auth";
 import NextAuth from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -95,7 +94,7 @@ function getEmailServerConfig() {
   return smtpConfig;
 }
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     EmailProvider({
@@ -108,11 +107,11 @@ export const authOptions: NextAuthOptions = {
     verifyRequest: "/auth/verify-request",
   },
   callbacks: {
-    async signIn({ user, account, profile, email }) {
+    async signIn({ user, account, profile, email }: any) {
       // Allow all email sign-ins
       return true;
     },
-    async session({ session, user }) {
+    async session({ session, user }: any) {
       if (session.user?.email) {
         try {
           // Get user from database
@@ -148,7 +147,7 @@ export const authOptions: NextAuthOptions = {
 
       return session;
     },
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, account, profile }: any) {
       if (user) {
         token.id = (user as any).id;
       }
@@ -156,7 +155,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
   },
   secret: process.env.NEXTAUTH_SECRET || (() => {
     if (process.env.NODE_ENV === "production") {

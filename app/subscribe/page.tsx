@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import SubscriptionForm from "@/components/SubscriptionForm";
 
 const planDetails = {
@@ -11,7 +11,7 @@ const planDetails = {
   premium: { name: "Premium", amount: 2999 },
 };
 
-export default function SubscribePage() {
+function SubscribeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -46,6 +46,18 @@ export default function SubscribePage() {
         <SubscriptionForm planId={planId} planName={plan.name} amount={plan.amount} />
       </div>
     </div>
+  );
+}
+
+export default function SubscribePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    }>
+      <SubscribeContent />
+    </Suspense>
   );
 }
 
