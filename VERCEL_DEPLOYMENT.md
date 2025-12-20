@@ -6,7 +6,7 @@ This guide will walk you through deploying your Next.js application to Vercel.
 
 1. A [Vercel account](https://vercel.com/signup) (free tier works)
 2. Your project pushed to a Git repository (GitHub, GitLab, or Bitbucket)
-3. A MySQL database (you can use Vercel Postgres, PlanetScale, or any MySQL provider)
+3. A PostgreSQL database (Vercel Postgres is recommended and can be created directly in Vercel)
 4. OpenAI API key
 5. SMTP/Email service credentials (for NextAuth email authentication)
 
@@ -14,21 +14,24 @@ This guide will walk you through deploying your Next.js application to Vercel.
 
 ### Step 1: Prepare Your Database
 
-You'll need a MySQL database. Here are some options:
+You'll need a PostgreSQL database. Here are some options:
 
-**Option A: Vercel Postgres (Recommended)**
-- Go to your Vercel project dashboard
-- Navigate to Storage → Create Database → Postgres
-- Note: You'll need to update your Prisma schema to use `postgresql` instead of `mysql` if you choose this option
+**Option A: Vercel Postgres (Recommended & Easiest)**
+- After creating your Vercel project, go to your project dashboard
+- Navigate to **Storage** tab → **Create Database** → Select **Postgres**
+- Vercel will automatically create the database and add the `POSTGRES_URL` environment variable
+- The connection string format will be: `postgres://user:password@host:port/database`
+- Note: Vercel Postgres connection string is automatically added to your environment variables
 
-**Option B: PlanetScale (MySQL)**
-- Sign up at [PlanetScale](https://planetscale.com)
-- Create a new database
-- Get your connection string
+**Option B: Supabase (Free PostgreSQL)**
+- Sign up at [Supabase](https://supabase.com)
+- Create a new project
+- Go to Settings → Database → Connection string (URI mode)
+- Copy the connection string (format: `postgresql://postgres:[password]@[host]:5432/postgres`)
 
-**Option C: Other MySQL Providers**
-- Railway, Supabase, or any MySQL-compatible database
-- Get your connection string
+**Option C: Other PostgreSQL Providers**
+- Railway, Neon, Render, or any PostgreSQL-compatible database
+- Get your connection string in the format: `postgresql://user:password@host:port/database`
 
 ### Step 2: Push Your Code to Git
 
@@ -62,12 +65,24 @@ git push -u origin main
    - **Output Directory**: `.next` (auto-detected)
    - **Install Command**: `npm install` (auto-detected)
 
-4. **Add Environment Variables**
-   Click "Environment Variables" and add the following:
+4. **Set Up Database (Vercel Postgres Recommended)**
+   
+   **If using Vercel Postgres (Recommended):**
+   - After importing the project, go to the **Storage** tab in your Vercel project
+   - Click **Create Database** → Select **Postgres**
+   - Choose a database name and region
+   - Vercel will automatically add `POSTGRES_URL` and `POSTGRES_PRISMA_URL` environment variables
+   - In **Environment Variables**, create `DATABASE_URL` and set it to the same value as `POSTGRES_PRISMA_URL` (this provides connection pooling optimized for Prisma)
+   - Note: You can find these values in the Storage tab → Your Database → .env.local
+   
+   **If using external PostgreSQL:**
+   - Get your connection string from your provider (format: `postgresql://user:password@host:port/database`)
+   - Add it as `DATABASE_URL` in Environment Variables
 
-   **Required Variables:**
+5. **Add Other Environment Variables**
+   Click "Environment Variables" and add the following:
+   
    ```
-   DATABASE_URL=your_mysql_connection_string
    NEXTAUTH_SECRET=generate_a_random_secret_here
    NEXTAUTH_URL=https://your-project.vercel.app
    OPENAI_API_KEY=your_openai_api_key
@@ -96,7 +111,7 @@ git push -u origin main
    ```
    Or use an online generator: https://generate-secret.vercel.app/32
 
-5. **Deploy**
+6. **Deploy**
    - Click "Deploy"
    - Wait for the build to complete (usually 2-5 minutes)
 
@@ -141,7 +156,20 @@ git push -u origin main
 
 After your first deployment, you need to run Prisma migrations to set up your database schema.
 
-**Option A: Using Vercel CLI**
+**Important:** Since you're using PostgreSQL (changed from MySQL), you may need to create a fresh migration. The existing migrations were created for MySQL, so for a fresh PostgreSQL database:
+
+```bash
+# Pull environment variables locally
+vercel env pull .env.local
+
+# Option 1: Reset and create new migration (for fresh database)
+npx prisma migrate dev --name init_postgres
+
+# Option 2: Or if you want to keep migration history, just deploy
+npx prisma migrate deploy
+```
+
+**Option A: Using Vercel CLI (Recommended)**
 ```bash
 vercel env pull .env.local
 npx prisma migrate deploy
@@ -171,7 +199,8 @@ You can also add migrations to your build process by updating `package.json`:
 
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
-| `DATABASE_URL` | ✅ Yes | MySQL connection string | `mysql://user:pass@host:3306/dbname` |
+| `DATABASE_URL` | ✅ Yes | PostgreSQL connection string | `postgresql://user:pass@host:5432/dbname` |
+| `POSTGRES_URL` | ⚠️ Auto | Auto-added by Vercel Postgres (can use as DATABASE_URL) | Auto-generated by Vercel |
 | `NEXTAUTH_SECRET` | ✅ Yes | Secret for NextAuth session encryption | Random 32+ character string |
 | `NEXTAUTH_URL` | ✅ Yes | Your app's public URL | `https://your-project.vercel.app` |
 | `OPENAI_API_KEY` | ✅ Yes | OpenAI API key for contract analysis | `sk-...` |
@@ -198,9 +227,10 @@ You can also add migrations to your build process by updating `package.json`:
 **Problem**: Cannot connect to database
 
 **Solution**:
-- Verify `DATABASE_URL` format is correct
-- Check database allows connections from Vercel IPs
-- For PlanetScale, ensure you're using the production branch connection string
+- Verify `DATABASE_URL` format is correct (should start with `postgresql://`)
+- If using Vercel Postgres, ensure the database is created and `POSTGRES_URL` is available
+- Check database allows connections from Vercel IPs (Vercel Postgres handles this automatically)
+- For external PostgreSQL providers, ensure connection pooling is enabled if needed
 - Check database credentials are correct
 
 ### Email Authentication Not Working
