@@ -13,10 +13,10 @@ function getEmailServerConfig() {
   }
 
   // Otherwise, try to build from SMTP_* variables
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = process.env.SMTP_PORT;
-  let smtpUser = process.env.SMTP_USER;
-  let smtpPassword = process.env.SMTP_PASSWORD;
+  const smtpHost = process.env.SMTP_HOST?.trim().replace(/\r\n/g, '').replace(/\n/g, '');
+  const smtpPort = process.env.SMTP_PORT?.trim().replace(/\r\n/g, '').replace(/\n/g, '');
+  let smtpUser = process.env.SMTP_USER?.trim().replace(/\r\n/g, '').replace(/\n/g, '');
+  let smtpPassword = process.env.SMTP_PASSWORD?.trim().replace(/\r\n/g, '').replace(/\n/g, '');
 
   // Clean up values that might have variable name prefixes (e.g., "MAIL_USERNAME=email@example.com")
   if (smtpUser && smtpUser.includes('=')) {
