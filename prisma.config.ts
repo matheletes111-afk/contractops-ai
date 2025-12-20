@@ -4,7 +4,8 @@
 import { config } from "dotenv";
 import { defineConfig, env } from "prisma/config";
 
-// Explicitly load only .env file (not .env.local)
+// Load .env.local first (for local development), then .env as fallback
+config({ path: ".env.local" });
 config({ path: ".env" });
 
 export default defineConfig({
