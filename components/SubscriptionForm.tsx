@@ -72,7 +72,7 @@ export default function SubscriptionForm({
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9933] focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9933] focus:border-transparent text-black"
             placeholder="Enter your full name"
           />
         </div>
@@ -99,7 +99,7 @@ export default function SubscriptionForm({
             type="text"
             value={paymentReference}
             onChange={(e) => setPaymentReference(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9933] focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9933] focus:border-transparent text-black"
             placeholder="Transaction ID or reference number"
           />
           <p className="text-sm text-gray-500 mt-1">
