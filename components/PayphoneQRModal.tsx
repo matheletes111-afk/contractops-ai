@@ -27,28 +27,14 @@ export default function PayphoneQRModal({
           </p>
         </div>
 
-        {/* Placeholder QR Code */}
+        {/* QR Code */}
         <div className="bg-gray-100 rounded-lg p-8 mb-6 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-48 h-48 bg-gray-300 rounded-lg mx-auto mb-4 flex items-center justify-center">
-              <svg
-                className="w-24 h-24 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                />
-              </svg>
-            </div>
-            <p className="text-sm text-gray-500">QR Code Placeholder</p>
-            <p className="text-xs text-gray-400 mt-2">
-              Replace with actual Payphone QR code
-            </p>
+            <img
+              src="/Qr_code.jpeg"
+              alt="Payphone QR Code"
+              className="w-48 h-48 mx-auto rounded-lg"
+            />
           </div>
         </div>
 
