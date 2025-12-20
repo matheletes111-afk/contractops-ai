@@ -31,7 +31,7 @@ export default function PayphoneQRModal({
         <div className="bg-gray-100 rounded-lg p-8 mb-6 flex items-center justify-center">
           <div className="text-center">
             <img
-              src="/Qr_code.jpeg"
+              src="/qr_code_new.jpeg"
               alt="Payphone QR Code"
               className="w-48 h-48 mx-auto rounded-lg"
             />
