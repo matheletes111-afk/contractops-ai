@@ -2,6 +2,7 @@
 import OpenAI from "openai";
 import { AnalysisResult, Clause, ErrorResult, RiskLevel } from "@/types/contract";
 import { chunkText, needsChunking } from "./chunker";
+import { detectLanguage, getClauseNames, HINDI_CLAUSES } from "./language-detector";
 
 const REQUIRED_CLAUSES = [
   "Term",
@@ -17,12 +18,30 @@ const REQUIRED_CLAUSES = [
 ];
 
 /**
- * Creates the prompt for contract analysis
+ * Creates the prompt for contract analysis with language support
  */
-function createAnalysisPrompt(contractText: string): string {
-  return `You are a legal contract risk analyzer. Analyze the following contract and extract these 10 key clauses:
+function createAnalysisPrompt(contractText: string, language: "hindi" | "english" | "mixed" = "english"): string {
+  const clauseNames = getClauseNames(language);
+  const isHindi = language === "hindi" || language === "mixed";
+  
+  // Create bilingual clause list for Hindi contracts
+  const clauseList = isHindi 
+    ? REQUIRED_CLAUSES.map((eng, i) => `${i + 1}. ${eng} (${HINDI_CLAUSES[eng as keyof typeof HINDI_CLAUSES]})`)
+    : REQUIRED_CLAUSES.map((c, i) => `${i + 1}. ${c}`);
+  
+  const languageInstruction = isHindi
+    ? `This contract is in Hindi (or mixed Hindi/English). Please analyze it accordingly:
+- Extract clauses in their original language (Hindi or English as they appear)
+- Provide summaries in Hindi if the clause is in Hindi, or in English if the clause is in English
+- Use the same language for suggested redlines as the original clause
+- Clause names can be in English or Hindi (use what matches the contract)`
+    : `This contract is in English. Analyze it accordingly.`;
 
-${REQUIRED_CLAUSES.map((c, i) => `${i + 1}. ${c}`).join("\n")}
+  return `You are a legal contract risk analyzer. ${languageInstruction}
+
+Analyze the following contract and extract these 10 key clauses:
+
+${clauseList.join("\n")}
 
 For each clause found in the contract:
 1. Assess the risk level as "Low", "Medium", or "High" based on:
@@ -31,11 +50,11 @@ For each clause found in the contract:
    - Missing protections
    - Unusual or onerous conditions
 
-2. Provide a plain-English summary explaining the risk and what the clause means
+2. Provide a summary explaining the risk and what the clause means. ${isHindi ? "Use Hindi if the clause is in Hindi, English if in English." : "Use plain English."}
 
-3. Extract the exact original text of the clause from the contract
+3. Extract the exact original text of the clause from the contract (preserve the original language)
 
-4. Suggest an improved redline version that reduces risk or adds clarity
+4. Suggest an improved redline version that reduces risk or adds clarity (use the same language as the original clause)
 
 If a clause is not found, you may omit it from the results.
 
@@ -49,11 +68,11 @@ Return your analysis as a JSON object in this EXACT format:
   "overall_risk": "Low" | "Medium" | "High",
   "clauses": [
     {
-      "name": "Clause Name",
+      "name": "Clause Name (in English or Hindi as appropriate)",
       "risk_level": "Low" | "Medium" | "High",
-      "summary": "Plain-English explanation of the clause and its risks",
-      "original_text": "Exact clause text from the contract",
-      "suggested_redline": "Improved version of the clause text"
+      "summary": "Explanation of the clause and its risks (in the same language as the clause)",
+      "original_text": "Exact clause text from the contract (preserve original language)",
+      "suggested_redline": "Improved version of the clause text (in the same language as original)"
     }
   ]
 }
@@ -67,7 +86,8 @@ ${contractText}`;
  */
 async function analyzeChunk(
   client: OpenAI,
-  chunk: string
+  chunk: string,
+  language: "hindi" | "english" | "mixed" = "english"
 ): Promise<AnalysisResult> {
   try {
     const response = await client.chat.completions.create({
@@ -76,11 +96,11 @@ async function analyzeChunk(
         {
           role: "system",
           content:
-            "You are a legal contract risk analyzer. Always return valid JSON matching the specified format.",
+            "You are a legal contract risk analyzer. Always return valid JSON matching the specified format. You can analyze contracts in English, Hindi, or mixed languages.",
         },
         {
           role: "user",
-          content: createAnalysisPrompt(chunk),
+          content: createAnalysisPrompt(chunk, language),
         },
       ],
       response_format: { type: "json_object" },
@@ -265,6 +285,7 @@ function truncateClauseTexts(result: AnalysisResult, maxLength: number = 10000):
 /**
  * Analyzes a contract using OpenAI
  * Handles chunking for long contracts automatically
+ * Supports Hindi and English contracts
  */
 export async function analyzeContract(
   contractText: string
@@ -282,6 +303,10 @@ export async function analyzeContract(
   const client = new OpenAI({ apiKey });
 
   try {
+    // Detect language of the contract
+    const language = detectLanguage(contractText);
+    console.log(`Detected contract language: ${language}`);
+
     // Check if chunking is needed
     if (needsChunking(contractText)) {
       const chunks = chunkText(contractText);
@@ -291,7 +316,7 @@ export async function analyzeContract(
       const results: AnalysisResult[] = [];
       for (let i = 0; i < chunks.length; i++) {
         console.log(`Analyzing chunk ${i + 1}/${chunks.length}`);
-        const result = await analyzeChunk(client, chunks[i]);
+        const result = await analyzeChunk(client, chunks[i], language);
         results.push(result);
       }
 
@@ -300,7 +325,7 @@ export async function analyzeContract(
       return truncateClauseTexts(merged);
     } else {
       // Single analysis and truncate long texts
-      const result = await analyzeChunk(client, contractText);
+      const result = await analyzeChunk(client, contractText, language);
       return truncateClauseTexts(result);
     }
   } catch (error) {

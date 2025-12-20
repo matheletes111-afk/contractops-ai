@@ -122,9 +122,12 @@ export default function AnalyzePage() {
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               AI Contract Risk Analyzer
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-gray-600 mb-2">
               Upload your contract to get instant risk analysis and suggested
               redlines
+            </p>
+            <p className="text-sm text-gray-500">
+              Supports English and Hindi (हिंदी) contracts in PDF or DOCX format
             </p>
           </div>
 
