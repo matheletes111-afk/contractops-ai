@@ -148,3 +148,138 @@ export async function createSubscriptionRequest(
     return null;
   }
 }
+
+/**
+ * Get subscription requests for a user
+ */
+export async function getUserSubscriptionRequests(userId: string) {
+  try {
+    const requests = await prisma.subscriptionRequest.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return requests.map((req) => ({
+      id: req.id,
+      selectedPlan: req.selectedPlan,
+      paymentReference: req.paymentReference,
+      status: req.status,
+      createdAt: req.createdAt.getTime(),
+      user: {
+        email: req.user.email,
+        name: req.user.name,
+      },
+    }));
+  } catch (error) {
+    console.error("Error getting user subscription requests:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all subscription requests (for admin)
+ */
+export async function getAllSubscriptionRequests() {
+  try {
+    const requests = await prisma.subscriptionRequest.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+            plan: true,
+          },
+        },
+      },
+    });
+
+    return requests.map((req) => ({
+      id: req.id,
+      userId: req.userId,
+      selectedPlan: req.selectedPlan,
+      paymentReference: req.paymentReference,
+      status: req.status,
+      createdAt: req.createdAt.getTime(),
+      user: {
+        email: req.user.email,
+        name: req.user.name,
+        currentPlan: req.user.plan,
+      },
+    }));
+  } catch (error) {
+    console.error("Error getting all subscription requests:", error);
+    return [];
+  }
+}
+
+/**
+ * Approve subscription request and update user plan
+ */
+export async function approveSubscriptionRequest(
+  requestId: string
+): Promise<boolean> {
+  try {
+    // Get the request
+    const request = await prisma.subscriptionRequest.findUnique({
+      where: { id: requestId },
+    });
+
+    if (!request || request.status !== "pending") {
+      return false;
+    }
+
+    // Update request status and user plan in a transaction
+    await prisma.$transaction([
+      prisma.subscriptionRequest.update({
+        where: { id: requestId },
+        data: { status: "approved" },
+      }),
+      prisma.user.update({
+        where: { id: request.userId },
+        data: { plan: request.selectedPlan },
+      }),
+    ]);
+
+    return true;
+  } catch (error) {
+    console.error("Error approving subscription request:", error);
+    return false;
+  }
+}
+
+/**
+ * Reject subscription request
+ */
+export async function rejectSubscriptionRequest(
+  requestId: string
+): Promise<boolean> {
+  try {
+    // For now, we'll just delete rejected requests
+    // You could also add a "rejected" status if needed
+    await prisma.subscriptionRequest.delete({
+      where: { id: requestId },
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error rejecting subscription request:", error);
+    return false;
+  }
+}
+
+/**
+ * Check if user is admin (based on email)
+ */
+export function isAdminEmail(email: string): boolean {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(",").map((e) => e.trim()) || [];
+  return adminEmails.includes(email);
+}
