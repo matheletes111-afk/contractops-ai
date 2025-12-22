@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication
@@ -29,7 +29,7 @@ export async function POST(
       );
     }
 
-    const analysisId = params.id;
+    const { id: analysisId } = await params;
 
     if (!analysisId) {
       return NextResponse.json(

@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication
@@ -30,7 +30,7 @@ export async function GET(
       );
     }
 
-    const analysisId = params.id;
+    const { id: analysisId } = await params;
 
     if (!analysisId) {
       return NextResponse.json(
