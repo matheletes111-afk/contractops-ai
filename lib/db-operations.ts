@@ -283,3 +283,68 @@ export function isAdminEmail(email: string): boolean {
   const adminEmails = process.env.ADMIN_EMAILS?.split(",").map((e) => e.trim()) || [];
   return adminEmails.includes(email);
 }
+
+/**
+ * Get all contracts for a user with their analysis results
+ */
+export async function getUserContracts(userId: string) {
+  try {
+    const contracts = await prisma.contract.findMany({
+      where: { userId },
+      include: {
+        analysisResults: {
+          orderBy: { createdAt: "desc" },
+          take: 1, // Get the latest analysis result
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return contracts.map((contract) => {
+      const latestAnalysis = contract.analysisResults[0];
+      let status: "Uploaded" | "Analyzed" | "Downloaded" = "Uploaded";
+      let riskScore: "Low" | "Medium" | "High" | null = null;
+
+      if (latestAnalysis) {
+        status = latestAnalysis.downloadedAt ? "Downloaded" : "Analyzed";
+        try {
+          const riskSummary = JSON.parse(latestAnalysis.riskSummary);
+          riskScore = riskSummary.overall_risk || null;
+        } catch (e) {
+          // If parsing fails, riskScore remains null
+        }
+      }
+
+      return {
+        id: contract.id,
+        fileName: contract.fileName,
+        createdAt: contract.createdAt.getTime(),
+        status,
+        riskScore,
+        analysisId: latestAnalysis?.id || null,
+      };
+    });
+  } catch (error) {
+    console.error("Error getting user contracts:", error);
+    return [];
+  }
+}
+
+/**
+ * Mark an analysis result as downloaded
+ */
+export async function markAnalysisDownloaded(analysisId: string): Promise<boolean> {
+  try {
+    await prisma.analysisResult.update({
+      where: { id: analysisId },
+      data: {
+        downloadedAt: new Date(),
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error marking analysis as downloaded:", error);
+    return false;
+  }
+}

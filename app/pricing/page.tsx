@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import PricingCard from "@/components/PricingCard";
+import Disclaimer from "@/components/Disclaimer";
 
 export default function PricingPage() {
   const { data: session } = useSession();
@@ -52,13 +53,18 @@ export default function PricingPage() {
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-16">
+          <div className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               Choose Your Plan
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Start with 1 free analysis. Upgrade when you're ready for more.
             </p>
+          </div>
+
+          {/* Disclaimer */}
+          <div className="mb-12">
+            <Disclaimer />
           </div>
 
           {/* Pricing Cards */}

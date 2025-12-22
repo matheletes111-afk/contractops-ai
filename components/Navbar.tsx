@@ -26,6 +26,12 @@ export default function Navbar() {
               {t("home")}
             </Link>
             <Link
+              href="/sample"
+              className="text-gray-700 hover:text-[#FF9933] transition-colors"
+            >
+              Sample Report
+            </Link>
+            <Link
               href="/pricing"
               className="text-gray-700 hover:text-[#FF9933] transition-colors"
             >
@@ -50,6 +56,12 @@ export default function Navbar() {
                   className="text-gray-700 hover:text-[#FF9933] transition-colors"
                 >
                   {t("dashboard")}
+                </Link>
+                <Link
+                  href="/contracts"
+                  className="text-gray-700 hover:text-[#FF9933] transition-colors"
+                >
+                  My Contracts
                 </Link>
                 <Link
                   href="/analyze"

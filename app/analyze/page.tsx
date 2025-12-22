@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import FileUpload from "@/components/FileUpload";
+import Disclaimer from "@/components/Disclaimer";
 import { AnalysisResult } from "@/types/contract";
 
 export default function AnalyzePage() {
@@ -44,7 +45,7 @@ export default function AnalyzePage() {
       }
 
       // Parse response with error handling for oversized data
-      let result: AnalysisResult;
+      let result: AnalysisResult & { analysisId?: string | null };
       try {
         const responseText = await response.text();
         result = JSON.parse(responseText);
@@ -60,21 +61,32 @@ export default function AnalyzePage() {
 
       // Store result in sessionStorage with size check
       try {
-        const jsonString = JSON.stringify(result);
+        // Extract analysisId before storing
+        const analysisId = result.analysisId;
+        const resultToStore: AnalysisResult = {
+          overall_risk: result.overall_risk,
+          clauses: result.clauses,
+          error: result.error,
+        };
+
+        const jsonString = JSON.stringify(resultToStore);
         // sessionStorage has a ~5-10MB limit depending on browser
         const maxStorageSize = 4 * 1024 * 1024; // 4MB limit to be safe
         
         if (jsonString.length > maxStorageSize) {
           console.warn("Result too large for sessionStorage, truncating...");
           // Further truncate clause texts if needed
-          result.clauses = result.clauses.map((clause) => ({
+          resultToStore.clauses = resultToStore.clauses.map((clause) => ({
             ...clause,
             original_text: clause.original_text.substring(0, 3000) + "... [truncated for storage]",
             suggested_redline: clause.suggested_redline.substring(0, 3000) + "... [truncated for storage]",
           }));
         }
         
-        sessionStorage.setItem("analysisResult", JSON.stringify(result));
+        sessionStorage.setItem("analysisResult", JSON.stringify(resultToStore));
+        if (analysisId) {
+          sessionStorage.setItem("analysisId", analysisId);
+        }
         router.push("/results");
       } catch (storageError: any) {
         console.error("Error storing result:", storageError);
@@ -130,6 +142,9 @@ export default function AnalyzePage() {
               Supports English and Hindi (हिंदी) contracts in PDF or DOCX format
             </p>
           </div>
+
+          {/* Disclaimer */}
+          <Disclaimer />
 
           {/* Upload Section */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-6">

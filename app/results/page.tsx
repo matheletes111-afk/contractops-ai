@@ -1,77 +1,125 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnalysisResult } from "@/types/contract";
 import RiskBadge from "@/components/RiskBadge";
 import ClauseCard from "@/components/ClauseCard";
+import Disclaimer from "@/components/Disclaimer";
 import { exportToPDF } from "@/lib/pdf-export";
 
 export default function ResultsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(true);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get analysis result from sessionStorage
-    try {
-      const stored = sessionStorage.getItem("analysisResult");
-      if (stored) {
+    const loadAnalysis = async () => {
+      // Check for analysisId in URL params
+      const urlAnalysisId = searchParams.get("analysisId");
+      
+      if (urlAnalysisId) {
+        setAnalysisId(urlAnalysisId);
+        // Fetch analysis from API
         try {
-          // Check size before parsing to prevent "Invalid array length" errors
-          if (stored.length > 10 * 1024 * 1024) { // 10MB
-            console.error("Stored data too large");
-            sessionStorage.removeItem("analysisResult");
-            setIsLoading(false);
-            return;
+          const response = await fetch(`/api/contracts/${urlAnalysisId}/analysis`);
+          if (!response.ok) {
+            throw new Error("Failed to fetch analysis");
           }
-          
-          const result = JSON.parse(stored) as AnalysisResult;
-          
-          // Validate and sanitize the result
-          if (result && typeof result === 'object' && Array.isArray(result.clauses)) {
-            // Ensure clauses array is reasonable size
-            if (result.clauses.length > 10000) {
-              console.warn("Clauses array too large, truncating");
-              result.clauses = result.clauses.slice(0, 100);
-            }
-            setAnalysisResult(result);
-          } else {
-            console.error("Invalid result structure");
-            sessionStorage.removeItem("analysisResult");
-          }
-        } catch (parseError: any) {
-          console.error("Error parsing analysis result:", parseError);
-          // Handle "Invalid array length" error specifically
-          if (parseError?.message?.includes("Invalid array length") || 
-              parseError?.name === "RangeError" ||
-              parseError?.message?.includes("too large") ||
-              parseError?.message?.includes("RangeError")) {
-            sessionStorage.removeItem("analysisResult");
-            // Set error state to show error message
-            setParseError("Invalid array length - Analysis result is too large to display. Please try analyzing a shorter contract.");
-          } else {
-            sessionStorage.removeItem("analysisResult");
-            setParseError("Failed to load analysis result. Please try analyzing again.");
-          }
+          const result = await response.json() as AnalysisResult;
+          setAnalysisResult(result);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          console.error("Error fetching analysis from API:", error);
+          setParseError("Failed to load analysis result. Please try again.");
+          setIsLoading(false);
+          return;
         }
       }
-    } catch (error: any) {
-      console.error("Error accessing sessionStorage:", error);
-      if (error?.message?.includes("Invalid array length") || error?.name === "RangeError") {
-        setParseError("Invalid array length - Analysis result is too large. Please try analyzing a shorter contract.");
-      }
-    }
-    setIsLoading(false);
-  }, []);
 
-  const handleExportPDF = () => {
+      // Get analysis result from sessionStorage (fallback for new analyses)
+      try {
+        const stored = sessionStorage.getItem("analysisResult");
+        const storedAnalysisId = sessionStorage.getItem("analysisId");
+        
+        if (storedAnalysisId && !urlAnalysisId) {
+          setAnalysisId(storedAnalysisId);
+        }
+
+        if (stored) {
+          try {
+            // Check size before parsing to prevent "Invalid array length" errors
+            if (stored.length > 10 * 1024 * 1024) { // 10MB
+              console.error("Stored data too large");
+              sessionStorage.removeItem("analysisResult");
+              setIsLoading(false);
+              return;
+            }
+            
+            const result = JSON.parse(stored) as AnalysisResult;
+            
+            // Validate and sanitize the result
+            if (result && typeof result === 'object' && Array.isArray(result.clauses)) {
+              // Ensure clauses array is reasonable size
+              if (result.clauses.length > 10000) {
+                console.warn("Clauses array too large, truncating");
+                result.clauses = result.clauses.slice(0, 100);
+              }
+              setAnalysisResult(result);
+            } else {
+              console.error("Invalid result structure");
+              sessionStorage.removeItem("analysisResult");
+            }
+          } catch (parseError: any) {
+            console.error("Error parsing analysis result:", parseError);
+            // Handle "Invalid array length" error specifically
+            if (parseError?.message?.includes("Invalid array length") || 
+                parseError?.name === "RangeError" ||
+                parseError?.message?.includes("too large") ||
+                parseError?.message?.includes("RangeError")) {
+              sessionStorage.removeItem("analysisResult");
+              // Set error state to show error message
+              setParseError("Invalid array length - Analysis result is too large to display. Please try analyzing a shorter contract.");
+            } else {
+              sessionStorage.removeItem("analysisResult");
+              setParseError("Failed to load analysis result. Please try analyzing again.");
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error("Error accessing sessionStorage:", error);
+        if (error?.message?.includes("Invalid array length") || error?.name === "RangeError") {
+          setParseError("Invalid array length - Analysis result is too large. Please try analyzing a shorter contract.");
+        }
+      }
+      setIsLoading(false);
+    };
+
+    loadAnalysis();
+  }, [searchParams]);
+
+  const handleExportPDF = async () => {
     if (analysisResult) {
       try {
         exportToPDF(analysisResult);
+        
+        // Track download if analysisId is available
+        if (analysisId) {
+          try {
+            await fetch(`/api/contracts/${analysisId}/download`, {
+              method: "POST",
+            });
+          } catch (error) {
+            console.error("Error tracking download:", error);
+            // Don't show error to user - download tracking is not critical
+          }
+        }
       } catch (error: any) {
         console.error("Error exporting PDF:", error);
         alert("Failed to export PDF. The result may be too large.");
@@ -202,6 +250,9 @@ export default function ResultsPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
+          {/* Disclaimer */}
+          <Disclaimer />
+
           {/* Header */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
             <div className="flex items-center justify-between mb-6">

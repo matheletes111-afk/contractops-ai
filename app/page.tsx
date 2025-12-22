@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import Disclaimer from "@/components/Disclaimer";
 
 export default function LandingPage() {
   const { data: session, status } = useSession();
@@ -37,6 +38,21 @@ export default function LandingPage() {
               </Link>
             )}
           </div>
+          <div className="mt-8">
+            <Link
+              href="/sample"
+              className="text-[#FF9933] hover:text-[#E6892A] font-medium underline"
+            >
+              See a sample NDA risk report →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Disclaimer */}
+      <section className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto">
+          <Disclaimer />
         </div>
       </section>
 

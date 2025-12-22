@@ -23,10 +23,10 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
 
   // Relations
-  accounts            Account[]
-  sessions            Session[]
-  contracts           Contract[]
-  analysisResults     AnalysisResult[]
+  accounts             Account[]
+  sessions             Session[]
+  contracts            Contract[]
+  analysisResults      AnalysisResult[]
   subscriptionRequests SubscriptionRequest[]
 
   @@map("users")
@@ -89,12 +89,13 @@ model Contract {
 
 // AnalysisResult model
 model AnalysisResult {
-  id         String   @id @default(cuid())
-  contractId String   @map("contract_id")
-  userId     String   @map("user_id")
-  riskSummary String  @map("risk_summary") @db.Text // JSON stringified
-  clauses    String   @db.Text // JSON stringified
-  createdAt  DateTime @default(now()) @map("created_at")
+  id           String    @id @default(cuid())
+  contractId   String    @map("contract_id")
+  userId       String    @map("user_id")
+  riskSummary  String    @map("risk_summary") @db.Text // JSON stringified
+  clauses      String    @db.Text // JSON stringified
+  createdAt    DateTime  @default(now()) @map("created_at")
+  downloadedAt DateTime? @map("downloaded_at") // Track when PDF is exported
 
   contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -104,12 +105,12 @@ model AnalysisResult {
 
 // SubscriptionRequest model
 model SubscriptionRequest {
-  id              String   @id @default(cuid())
-  userId          String   @map("user_id")
-  selectedPlan    String   @map("selected_plan") // "basic" | "standard" | "premium"
-  paymentReference String? @map("payment_reference")
-  status          String   @default("pending") // "pending" | "approved"
-  createdAt       DateTime @default(now()) @map("created_at")
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  selectedPlan     String   @map("selected_plan") // "basic" | "standard" | "premium"
+  paymentReference String?  @map("payment_reference")
+  status           String   @default("pending") // "pending" | "approved"
+  createdAt        DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

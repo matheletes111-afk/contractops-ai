@@ -3,7 +3,9 @@
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { isAdminEmail } from "@/lib/admin-utils";
+import Disclaimer from "@/components/Disclaimer";
 
 interface SubscriptionRequest {
   id: string;
@@ -82,6 +84,9 @@ export default function DashboardPage() {
               Welcome back, {user?.name || user?.email || "User"}
             </p>
           </div>
+
+          {/* Disclaimer */}
+          <Disclaimer />
 
           {/* Subscription Status */}
           {subscriptionStatus === "pending" && (
@@ -243,25 +248,31 @@ export default function DashboardPage() {
           <div className="bg-white rounded-xl shadow-lg p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
             <div className="flex flex-wrap gap-4">
-              <a
+              <Link
                 href="/analyze"
                 className="px-6 py-3 rounded-lg font-semibold bg-[#FF9933] text-white hover:bg-[#E6892A] transition-all"
               >
                 Analyze Contract
-              </a>
-              <a
+              </Link>
+              <Link
+                href="/contracts"
+                className="px-6 py-3 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all"
+              >
+                My Contracts
+              </Link>
+              <Link
                 href="/pricing"
                 className="px-6 py-3 rounded-lg font-semibold bg-gray-100 text-gray-900 hover:bg-gray-200 transition-all"
               >
                 Upgrade Plan
-              </a>
+              </Link>
               {isAdminEmail(user?.email) && (
-                <a
+                <Link
                   href="/admin/subscriptions"
                   className="px-6 py-3 rounded-lg font-semibold bg-purple-600 text-white hover:bg-purple-700 transition-all"
                 >
                   Admin Panel
-                </a>
+                </Link>
               )}
             </div>
           </div>

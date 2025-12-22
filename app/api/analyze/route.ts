@@ -137,8 +137,9 @@ export async function POST(request: NextRequest) {
 
     // Save to database (before serialization)
     const contractId = await createContract(userId, file.name);
+    let analysisId: string | null = null;
     if (contractId) {
-      await saveAnalysis(contractId, userId, analysisResult);
+      analysisId = await saveAnalysis(contractId, userId, analysisResult);
       await incrementAnalysisCount(userId);
     } else {
       console.error("Failed to save contract to database");
@@ -192,7 +193,10 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      return NextResponse.json(analysisResult);
+      return NextResponse.json({
+        ...analysisResult,
+        analysisId: analysisId || null,
+      });
     } catch (serializeError: any) {
       console.error("Error serializing response:", serializeError);
       // Final fallback for any other serialization errors
