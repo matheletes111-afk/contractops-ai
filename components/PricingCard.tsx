@@ -44,26 +44,28 @@ export default function PricingCard({
         </div>
         <p className="text-gray-600">{analyses} contract analyses</p>
       </div>
-      <ul className="space-y-3 mb-8">
-        {features.map((feature, index) => (
-          <li key={index} className="flex items-start">
-            <svg
-              className="w-5 h-5 text-[#FF9933] mr-2 mt-0.5 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <span className="text-gray-700">{feature}</span>
-          </li>
-        ))}
-      </ul>
+      <div className="mb-8">
+        <ul className="space-y-3 max-h-[500px] overflow-y-auto">
+          {features.map((feature, index) => (
+            <li key={index} className="flex items-start">
+              <svg
+                className="w-5 h-5 text-[#FF9933] mr-3 mt-0.5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              <span className="text-gray-700 text-sm leading-relaxed">{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
       {isCurrentPlan ? (
         <button
           disabled
