@@ -1,6 +1,7 @@
 // NextAuth configuration
 import NextAuth from "next-auth";
 import EmailProvider from "next-auth/providers/email";
+import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 
@@ -101,6 +102,11 @@ export const authOptions = {
       server: getEmailServerConfig(),
       from: process.env.EMAIL_FROM || "noreply@contractops-ai.com",
     }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      allowDangerousEmailAccountLinking: true, // Allow linking accounts with same email
+    }),
   ],
   pages: {
     signIn: "/auth/signin",
@@ -125,6 +131,7 @@ export const authOptions = {
               data: {
                 email: session.user.email,
                 name: session.user.name || null,
+                image: session.user.image || null, // Save Google profile image
                 plan: "free",
                 analysisCount: 0,
               },
@@ -135,6 +142,14 @@ export const authOptions = {
             (session as any).user.plan = newUser.plan;
             (session as any).user.analysis_count = newUser.analysisCount;
           } else {
+            // Update user image if it's not set and we have one from Google
+            if (!dbUser.image && session.user.image) {
+              await prisma.user.update({
+                where: { id: dbUser.id },
+                data: { image: session.user.image },
+              });
+            }
+            
             // Add user ID and plan to session
             (session as any).user.id = dbUser.id;
             (session as any).user.plan = dbUser.plan;

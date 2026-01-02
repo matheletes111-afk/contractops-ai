@@ -26,6 +26,11 @@ SMTP_PORT=587
 SMTP_USER=your_smtp_username
 SMTP_PASSWORD=your_smtp_password
 EMAIL_FROM=noreply@yourdomain.com
+
+# Google OAuth Configuration (optional - for Google login)
+# Get credentials from: https://console.cloud.google.com/apis/credentials
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 ```
 
 ## Database Setup (MySQL with Prisma)
@@ -93,15 +98,43 @@ npm install
 npm run dev
 ```
 
+## Google OAuth Setup (Optional)
+
+1. **Go to Google Cloud Console**:
+   - Visit [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+
+2. **Enable Google+ API**:
+   - Go to "APIs & Services" > "Library"
+   - Search for "Google+ API" and enable it
+
+3. **Create OAuth 2.0 Credentials**:
+   - Go to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "OAuth client ID"
+   - Choose "Web application"
+   - Add authorized redirect URIs:
+     - For development: `http://localhost:3000/api/auth/callback/google`
+     - For production: `https://yourdomain.com/api/auth/callback/google`
+   - Copy the Client ID and Client Secret
+
+4. **Add to `.env.local`**:
+   ```bash
+   GOOGLE_CLIENT_ID=your_client_id_here
+   GOOGLE_CLIENT_SECRET=your_client_secret_here
+   ```
+
+5. **Restart your development server**
+
 ## Features Implemented
 
 - ✅ NextAuth email magic link authentication
+- ✅ Google OAuth login (optional)
 - ✅ MySQL database with Prisma ORM
 - ✅ Usage limits (1 free analysis, then redirect to pricing)
 - ✅ Subscription plans page (Basic ₹999, Standard ₹1499, Premium ₹2999)
 - ✅ Subscription request flow with QR code modal
 - ✅ Dashboard with placeholder charts
-- ✅ Hindi/English language toggle (default: Hindi)
+- ✅ Hindi/English language toggle (default: English)
 - ✅ Route protection for authenticated pages
 - ✅ Brand color #FF9933 applied throughout
 - ✅ All analysis results saved to MySQL database
@@ -110,6 +143,9 @@ npm run dev
 
 - The QR code in the subscribe page is a placeholder - replace with actual Payphone QR code integration
 - Email service needs to be configured for magic link authentication to work
+- Google OAuth is optional - users can sign in with either email (magic link) or Google
+- If Google OAuth is not configured, only email login will be available
 - Admin approval for subscriptions is manual (future feature)
 - All existing contract analysis functionality is preserved
+- Users get 1 free analysis regardless of login method (email or Google)
 
