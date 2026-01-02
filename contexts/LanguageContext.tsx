@@ -12,7 +12,7 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("hi"); // Default to Hindi
+  const [language, setLanguageState] = useState<Language>("en"); // Default to English
 
   useEffect(() => {
     // Load language from localStorage
