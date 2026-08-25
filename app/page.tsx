@@ -17,7 +17,7 @@ export default function LandingPage() {
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Get instant risk analysis and suggested redlines for your legal contracts.
-            Powered by AI to help you make informed decisions faster.
+            Powered by AI to help you spot risk and negotiate with confidence.
           </p>
           <div className="flex gap-4 justify-center">
             {status === "loading" ? (
