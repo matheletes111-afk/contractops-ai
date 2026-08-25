@@ -24,10 +24,10 @@ This document explains how users can analyze their payments and how admins can m
 1. Go to `/pricing` to view available plans
 2. Select a plan and click "Subscribe"
 3. You'll be redirected to the subscription form
-4. Fill in your details and payment reference (optional)
-5. Scan the QR code to make payment via Payphone
+4. Fill in your details and payment reference (**required**, and can only be used once)
+5. Scan the QR code to make payment via PhonePe
 6. Submit the form after payment
-7. Your request will be pending until an admin approves it
+7. Your request will be pending manual verification (usually within 24 hours)
 
 ## For Admins
 
@@ -110,7 +110,7 @@ Subscription requests are stored in the `subscription_requests` table with:
 - `id`: Unique request ID
 - `user_id`: User who made the request
 - `selected_plan`: Plan requested (basic, standard, premium)
-- `payment_reference`: Transaction reference (optional)
+- `payment_reference`: Transaction reference (required by the API, and checked for duplicates before a request is created)
 - `status`: Request status (pending, approved)
 - `created_at`: Timestamp of request
 
@@ -146,5 +146,14 @@ NEXT_PUBLIC_ADMIN_EMAILS=admin@example.com,another-admin@example.com
 - **Can't see Admin Panel link**: Make sure your email is in `NEXT_PUBLIC_ADMIN_EMAILS` and you've refreshed the page
 - **403 Error on Admin Panel**: Verify your email is in `ADMIN_EMAILS` environment variable
 - **User plan not updating**: Check that the subscription request was approved (status should be "approved")
-- **Payment reference missing**: Users can submit requests without payment reference, but it's recommended to ask for it
+- **Payment reference missing**: The form now requires a payment reference before it can be submitted
+- **"This payment reference has already been submitted" error**: the same UTR/transaction ID was already used on a prior request — check `/admin/subscriptions` for the earlier request before asking the user to resubmit
+
+## Current Payment Setup: Risks & Upgrade Path
+
+The current flow uses Rishav's **personal PhonePe QR code** (no business/current account yet) with fully manual admin verification — no payment gateway, no webhook, no automated confirmation. This got two safety fixes (payment reference now required, and duplicate-reference detection to stop the same UTR being reused across requests), but the underlying approach still carries real risk worth knowing about:
+
+- **Personal UPI ID receiving business revenue**: complicates GST/tax reconciliation and commingles personal and business funds. This is an accounting/compliance question, not a coding one — get a CA's input before volume grows.
+- **Manual reconciliation doesn't scale**: every approval still requires Rishav to eyeball the PhonePe app against the submitted reference. Fine at a handful of signups/week, not fine much beyond that.
+- **A business current account is *not* actually required to start accepting payments properly.** Razorpay, Cashfree, Instamojo, and PayU all support Individual/Proprietorship merchant onboarding with just a PAN and a savings bank account. Razorpay Payment Links is the fastest path: generate a payment link per plan, the customer pays by card/UPI/netbanking, and a webhook can auto-approve the `SubscriptionRequest` — removing manual admin verification (and the personal-QR risk) entirely. Worth migrating to once there's a few minutes to set up KYC, even before opening a current account.
 

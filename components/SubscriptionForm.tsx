@@ -93,17 +93,18 @@ export default function SubscriptionForm({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Payment Reference (Optional)
+            Payment Reference (UTR / Transaction ID)
           </label>
           <input
             type="text"
+            required
             value={paymentReference}
             onChange={(e) => setPaymentReference(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9933] focus:border-transparent text-black"
-            placeholder="Transaction ID or reference number"
+            placeholder="Transaction ID or UTR from your payment app"
           />
           <p className="text-sm text-gray-500 mt-1">
-            Provide your payment transaction reference if available
+            Required — find this in your payment app after completing the transfer. Each reference can only be used once.
           </p>
         </div>
 

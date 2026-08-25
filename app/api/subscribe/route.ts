@@ -1,7 +1,7 @@
 // API route for subscription requests
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
-import { createSubscriptionRequest } from "@/lib/db-operations";
+import { createSubscriptionRequest, isPaymentReferenceUsed } from "@/lib/db-operations";
 
 export const runtime = "nodejs";
 
@@ -36,11 +36,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const trimmedReference =
+      typeof payment_reference === "string" ? payment_reference.trim() : "";
+
+    if (!trimmedReference) {
+      return NextResponse.json(
+        { error: "Payment reference is required" },
+        { status: 400 }
+      );
+    }
+
+    if (await isPaymentReferenceUsed(trimmedReference)) {
+      return NextResponse.json(
+        {
+          error:
+            "This payment reference has already been submitted. If you believe this is a mistake, contact support.",
+        },
+        { status: 409 }
+      );
+    }
+
     // Create subscription request
     const requestId = await createSubscriptionRequest(
       userId,
       plan,
-      payment_reference
+      trimmedReference
     );
 
     if (!requestId) {

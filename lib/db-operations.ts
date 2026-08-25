@@ -125,19 +125,32 @@ export async function incrementAnalysisCount(userId: string): Promise<boolean> {
 }
 
 /**
+ * Check whether a payment reference has already been submitted (by any user)
+ */
+export async function isPaymentReferenceUsed(
+  paymentReference: string
+): Promise<boolean> {
+  const existing = await prisma.subscriptionRequest.findFirst({
+    where: { paymentReference },
+    select: { id: true },
+  });
+  return existing !== null;
+}
+
+/**
  * Create subscription request
  */
 export async function createSubscriptionRequest(
   userId: string,
   selectedPlan: "basic" | "standard" | "premium",
-  paymentReference?: string
+  paymentReference: string
 ): Promise<string | null> {
   try {
     const request = await prisma.subscriptionRequest.create({
       data: {
         userId,
         selectedPlan,
-        paymentReference: paymentReference || null,
+        paymentReference,
         status: "pending",
       },
     });

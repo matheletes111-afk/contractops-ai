@@ -95,7 +95,7 @@ export default function DashboardPage() {
                 Subscription Request Submitted
               </h3>
               <p className="text-blue-700">
-                Your subscription request is pending approval. You'll receive an email once it's approved.
+                Your subscription request is pending manual verification (usually within 24 hours). You'll receive an email once it's approved.
               </p>
             </div>
           )}
